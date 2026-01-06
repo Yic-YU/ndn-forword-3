@@ -22,6 +22,8 @@ sudo apt install -y \
   tmux jq
 ```
 
+如果你已经通过其它方式（例如源码/`/usr/local`）安装了 OVS，为避免“混装”导致的路径/服务冲突，可以先不装 `openvswitch-switch`，仅安装 `mininet` 和工具即可。
+
 可选：如果你需要抓包 GUI，可以安装 `wireshark`（WSL2 下一般更推荐用 `tcpdump`/`tshark`）。
 
 ### 启动/检查 Open vSwitch
