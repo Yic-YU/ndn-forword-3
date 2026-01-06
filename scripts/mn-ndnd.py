@@ -79,9 +79,26 @@ def _write_host_wrapper(wrapper_path: str, ndnd_bin: str, state_dir: str):
     content = f"""\
 #!/usr/bin/env sh
 set -eu
-name="$(hostname)"
-sock="{state_dir}/$name.sock"
-export NDN_CLIENT_TRANSPORT="unix://$sock"
+
+# Mininet hosts usually keep the system hostname, so we detect the Mininet node
+# name from interface names like "g1-eth0", "s2-eth1", etc.
+if [ -z "${{NDN_CLIENT_TRANSPORT:-}}" ]; then
+  node="$(
+    ip -o link show 2>/dev/null \
+      | awk -F': ' '{{print $2}}' \
+      | sed 's/@.*$//' \
+      | sed -n 's/^\\([A-Za-z0-9_][A-Za-z0-9_]*\\)-eth[0-9][0-9]*$/\\1/p' \
+      | head -n 1
+  )"
+  if [ -n "${{node:-}}" ] && [ -S "{state_dir}/$node.sock" ]; then
+    export NDN_CLIENT_TRANSPORT="unix://{state_dir}/$node.sock"
+  else
+    echo "ndndctl: cannot auto-detect socket; set NDN_CLIENT_TRANSPORT=unix://{state_dir}/<node>.sock" >&2
+    echo "ndndctl: available sockets:" >&2
+    ls -1 "{state_dir}"/*.sock 2>/dev/null || true
+    exit 2
+  fi
+fi
 exec "{ndnd_bin}" "$@"
 """
     with open(wrapper_path, "w", encoding="utf-8") as f:
@@ -331,4 +348,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
